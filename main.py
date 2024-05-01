@@ -1,94 +1,55 @@
-def solve_sudoku(board):
-  """
-  با استفاده از رهیابی معکوس، یک مسأله‌ی سودوکو را حل می‌کند.
+from z3 import *
 
-  Args:
-      board: یک لیست از لیست‌های 9x9 که نماینده‌ی تخته‌ی سودوکو است.
+def solve_sudoku(puzzle):
+    # ایجاد یک نمونه از راه‌حل‌گر Z3
+    solver = Solver()
 
-  Returns:
-      True اگر مسأله حل شود، در غیر این صورت False.
-  """
-  find = find_empty(board)
-  if not find:
-    return True
-  row, col = find
+    # تعریف شبکه
+    grid = [[Int(f"cell_{i}_{j}") for j in range(9)] for i in range(9)]
 
-  for num in range(1, 10):
-    if is_valid(board, row, col, num):
-      board[row][col] = num
+    # افزودن محدودیت برای هر خانه
+    for i in range(9):
+        for j in range(9):
+            # افزودن محدودیت‌ها برای خانه‌هایی که مقدار مشخصی دارند
+            if puzzle[i][j] != 0:
+                solver.add(grid[i][j] == puzzle[i][j])
+            
+            # افزودن محدودیت‌ها برای هر ردیف
+            solver.add(Distinct(grid[i]))
 
-      if solve_sudoku(board):
-        return True
+            # افزودن محدودیت‌ها برای هر ستون
+            solver.add(Distinct([grid[x][j] for x in range(9)]))
 
-      board[row][col] = 0
+            # افزودن محدودیت‌ها برای هر زیرشبکه 3x3
+            subgrid_start_i, subgrid_start_j = 3 * (i // 3), 3 * (j // 3)
+            solver.add(Distinct([grid[x][y] for x in range(subgrid_start_i, subgrid_start_i + 3) 
+                                             for y in range(subgrid_start_j, subgrid_start_j + 3)]))
+    
+    # بررسی اینکه آیا پازل قابل حل است یا خیر
+    if solver.check() == sat:
+        model = solver.model()
+        solution = [[model.evaluate(grid[i][j]).as_long() for j in range(9)] for i in range(9)]
+        return solution
+    else:
+        return None
 
-  return False
-
-def find_empty(board):
-  """
-  یک خانه خالی در تخته‌ی سودوکو پیدا می‌کند.
-
-  Args:
-      board: یک لیست از لیست‌های 9x9 که نماینده‌ی تخته‌ی سودوکو است.
-
-  Returns:
-      یک تاپل شامل شماره ردیف و ستون خانه‌ی خالی، یا در صورت عدم وجود خانه خالی، None.
-  """
-  for i in range(len(board)):
-    for j in range(len(board[0])):
-      if board[i][j] == 0:
-        return (i, j)
-  return None
-
-def is_valid(board, row, col, num):
-  """
-  بررسی می‌کند که قرار دادن یک عدد در یک خانه، با قوانین سودوکو سازگار است یا خیر.
-
-  Args:
-      board: یک لیست از لیست‌های 9x9 که نماینده‌ی تخته‌ی سودوکو است.
-      row: شماره ردیف خانه.
-      col: شماره ستون خانه.
-      num: عددی که باید در خانه قرار داده شود.
-
-  Returns:
-      True اگر قرار دادن عدد معتبر باشد، در غیر این صورت False.
-  """
-  # بررسی ردیف
-  for i in range(len(board)):
-    if board[i][col] == num and i != row:
-      return False
-
-  # بررسی ستون
-  for j in range(len(board[0])):
-    if board[row][j] == num and j != col:
-      return False
-
-  # بررسی زیرتخته
-  start_row = row - row % 3
-  start_col = col - col % 3
-  for i in range(start_row, start_row + 3):
-    for j in range(start_col, start_col + 3):
-      if board[i][j] == num and (i, j) != (row, col):
-        return False
-
-  return True
-
-# نمونه استفاده
-board = [
-  [0, 0, 0, 0, 9, 4, 0, 3, 0],
-  [0, 0, 0, 5, 1, 0, 0, 0, 7],
-  [0, 8, 9, 0, 0, 0, 0, 4, 0],
-  [0, 0, 0, 0, 0, 0, 2, 0, 8],
-  [0, 6, 0, 2, 0, 1, 0, 5, 0],
-  [1, 0, 2, 0, 0, 0, 0, 0, 0],
-  [0, 7, 0, 0, 0, 0, 5, 2, 0],
-  [9, 0, 0, 0, 6, 5, 0, 0, 0],
-  [0, 4, 0, 9, 7, 0, 0, 0, 0]
+# پازل نمونه (عدد 0 نشان‌دهنده خانه‌های خالی است)
+puzzle = [
+    [0, 0, 0, 0, 6, 1, 0, 0, 2],
+    [0, 7, 0, 0, 0, 0, 0, 0, 0],
+    [9, 2, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 4, 5, 2, 0, 9, 0, 0],
+    [0, 8, 2, 1, 0, 4, 6, 3, 0],
+    [0, 0, 3, 0, 7, 6, 1, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 9, 8],
+    [0, 0, 0, 0, 0, 0, 0, 4, 0],
+    [6, 0, 0, 3, 8, 0, 0, 0, 0]
 ]
 
-if solve_sudoku(board):
-  print("Sudoku Solved!")
-  for i in board:
-    print(i)
+solution = solve_sudoku(puzzle)
+if solution:
+    print("پازل سودوکو با موفقیت حل شد:")
+    for row in solution:
+        print(row)
 else:
-  print("No solution found")
+    print("برای پازل سودوکو داده شده هیچ راه‌حلی وجود ندارد.")

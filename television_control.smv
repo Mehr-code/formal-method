@@ -1,0 +1,66 @@
+-- تعریف حالت‌های مختلف دستگاه تلویزیون
+MODULE main
+VAR
+    state : {Off, On, Menu, InputSelect, VolumeAdjust, ChannelChange, AppMode};
+
+-- حالت اولیه دستگاه
+ASSIGN
+    init(state) := Off;
+
+-- تعریف توابع تغییر حالت
+DEFINE
+    PowerOnOff := case
+        state = Off : On;
+        state = On : Off;
+        TRUE : state;
+    esac;
+
+    OpenCloseMenu := case
+        state = On : Menu;
+        state = Menu : On;
+        TRUE : state;
+    esac;
+
+    SelectInput := case
+        state = On : InputSelect;
+        state = InputSelect : On;
+        TRUE : state;
+    esac;
+
+    AdjustVolume := case
+        state = On : VolumeAdjust;
+        state = VolumeAdjust : On;
+        TRUE : state;
+    esac;
+
+    ChangeChannel := case
+        state = On : ChannelChange;
+        state = ChannelChange : On;
+        TRUE : state;
+    esac;
+
+    OpenCloseApp := case
+        state = On : AppMode;
+        state = AppMode : On;
+        TRUE : state;
+    esac;
+
+-- انتقال بین حالت‌ها
+TRANS
+    next(state) = case
+        (state = Off | state = On) : PowerOnOff;
+        (state = On | state = Menu) : OpenCloseMenu;
+        (state = On | state = InputSelect) : SelectInput;
+        (state = On | state = VolumeAdjust) : AdjustVolume;
+        (state = On | state = ChannelChange) : ChangeChannel;
+        (state = On | state = AppMode) : OpenCloseApp;
+        TRUE : state;
+    esac;
+
+-- ویژگی ایمنی: حالت دستگاه باید همیشه تعریف شده باشد
+LTLSPEC
+    G (state = Off | state = On | state = Menu | state = InputSelect | state = VolumeAdjust | state = ChannelChange | state = AppMode);
+
+-- ویژگی زیست پذیری: در نهایت، حالت دستگاه باید روشن شود
+LTLSPEC
+    F (state = On);

@@ -1,8 +1,8 @@
 // تعریف مقادیر مختلف حالت‌های دستگاه
-mtype = {Off, On, Menu, InputSelect, VolumeAdjust, ChannelChange, AppMode};
+mtype DeviceState = {Off, On, Menu, InputSelect, VolumeAdjust, ChannelChange, AppMode};
 
 // تعریف مقادیر مختلف دکمه‌های کنترل
-mtype = {Power, MenuBtn, InputBtn, VolUp, VolDown, ChanUp, ChanDown, AppBtn, ExitBtn};
+mtype ControlButton = {Power, MenuBtn, InputBtn, VolUp, VolDown, ChanUp, ChanDown, AppBtn, ExitBtn};
 
 // مقدار اولیه حالت دستگاه
 mtype state = Off;
@@ -67,7 +67,17 @@ proctype OpenCloseApp() {
     fi;
 }
 
-// فرآیند فعال کنترل از راه دور
+// فرآیند فعال کردن دستیار صوتی
+proctype ActivateVoiceAssistant() {
+    if
+    // اگر حالت دستگاه روشن است، دستیار صوتی را فعال کن
+    :: state == On -> state = VoiceAssistant
+    // اگر حالت دستگاه دستیار صوتی است، به حالت روشن برگرد
+    :: state == VoiceAssistant -> state = On
+    fi;
+}
+
+// فرآیند کنترل از راه دور
 active proctype RemoteControl() {
     do
     // اجرای فرآیند روشن/خاموش کردن در حالت‌های روشن و خاموش
@@ -82,11 +92,13 @@ active proctype RemoteControl() {
     :: (state == On || state == ChannelChange) -> run ChangeChannel()
     // اجرای فرآیند باز/بسته کردن اپلیکیشن در حالت‌های روشن و اپلیکیشن
     :: (state == On || state == AppMode) -> run OpenCloseApp()
+    // اجرای فرآیند فعال کردن دستیار صوتی در حالت‌های روشن و دستیار صوتی
+    :: (state == On || state == VoiceAssistant) -> run ActivateVoiceAssistant()
     od;
 }
 
 // ویژگی ایمنی: حالت دستگاه نباید نامعتبر باشد
-ltl safety { [](state == Off || state == On || state == Menu || state == InputSelect || state == VolumeAdjust || state == ChannelChange || state == AppMode) }
+ltl safety { [](state == Off || state == On || state == Menu || state == InputSelect || state == VolumeAdjust || state == ChannelChange || state == AppMode || state == VoiceAssistant) }
 
 // ویژگی liveness: در نهایت، حالت دستگاه باید روشن شود
 ltl liveness { <> (state == On) }

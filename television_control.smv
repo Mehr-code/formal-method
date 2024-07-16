@@ -1,66 +1,43 @@
--- تعریف حالت‌های مختلف دستگاه تلویزیون
+// ماژول اصلی برنامه
 MODULE main
+
+// تعریف متغیرها
 VAR
-    state : {Off, On, Menu, InputSelect, VolumeAdjust, ChannelChange, AppMode};
+    state : {off, on}; // متغیر وضعیت تلویزیون (خاموش یا روشن)
+    channel : 1..100; // متغیر کانال تلویزیون (از 1 تا 100)
+    volume : 0..100; // متغیر حجم صدا (از 0 تا 100)
+    input : {turn_on, turn_off, increase_channel, decrease_channel, increase_volume, decrease_volume}; // متغیر ورودی برای تغییر وضعیت تلویزیون، کانال و حجم صدا
 
--- حالت اولیه دستگاه
+// مقداردهی اولیه متغیرها
 ASSIGN
-    init(state) := Off;
+    init(state) := off; // مقدار اولیه وضعیت تلویزیون: خاموش
+    init(channel) := 1; // مقدار اولیه کانال: 1
+    init(volume) := 50; // مقدار اولیه حجم صدا: 50
 
--- تعریف توابع تغییر حالت
-DEFINE
-    PowerOnOff := case
-        state = Off : On;
-        state = On : Off;
-        TRUE : state;
+    // تعریف تغییرات وضعیت تلویزیون
+    next(state) := case
+        state = off & input = turn_on : on; // اگر تلویزیون خاموش باشد و ورودی روشن کردن دریافت شود، تلویزیون روشن شود
+        state = on & input = turn_off : off; // اگر تلویزیون روشن باشد و ورودی خاموش کردن دریافت شود، تلویزیون خاموش شود
+        TRUE : state; // در غیر این صورت وضعیت تلویزیون تغییر نکند
     esac;
 
-    OpenCloseMenu := case
-        state = On : Menu;
-        state = Menu : On;
-        TRUE : state;
+    // تعریف تغییرات کانال تلویزیون
+    next(channel) := case
+        state = on & input = increase_channel & channel < 100 : channel + 1; // اگر تلویزیون روشن باشد و ورودی افزایش کانال دریافت شود و کانال کمتر از 100 باشد، کانال یک واحد افزایش یابد
+        state = on & input = decrease_channel & channel > 1 : channel - 1; // اگر تلویزیون روشن باشد و ورودی کاهش کانال دریافت شود و کانال بیشتر از 1 باشد، کانال یک واحد کاهش یابد
+        TRUE : channel; // در غیر این صورت کانال تغییر نکند
     esac;
 
-    SelectInput := case
-        state = On : InputSelect;
-        state = InputSelect : On;
-        TRUE : state;
+    // تعریف تغییرات حجم صدا
+    next(volume) := case
+        state = on & input = increase_volume & volume < 100 : volume + 1; // اگر تلویزیون روشن باشد و ورودی افزایش حجم صدا دریافت شود و حجم صدا کمتر از 100 باشد، حجم صدا یک واحد افزایش یابد
+        state = on & input = decrease_volume & volume > 0 : volume - 1; // اگر تلویزیون روشن باشد و ورودی کاهش حجم صدا دریافت شود و حجم صدا بیشتر از 0 باشد، حجم صدا یک واحد کاهش یابد
+        TRUE : volume; // در غیر این صورت حجم صدا تغییر نکند
     esac;
 
-    AdjustVolume := case
-        state = On : VolumeAdjust;
-        state = VolumeAdjust : On;
-        TRUE : state;
-    esac;
-
-    ChangeChannel := case
-        state = On : ChannelChange;
-        state = ChannelChange : On;
-        TRUE : state;
-    esac;
-
-    OpenCloseApp := case
-        state = On : AppMode;
-        state = AppMode : On;
-        TRUE : state;
-    esac;
-
--- انتقال بین حالت‌ها
-TRANS
-    next(state) = case
-        (state = Off | state = On) : PowerOnOff;
-        (state = On | state = Menu) : OpenCloseMenu;
-        (state = On | state = InputSelect) : SelectInput;
-        (state = On | state = VolumeAdjust) : AdjustVolume;
-        (state = On | state = ChannelChange) : ChangeChannel;
-        (state = On | state = AppMode) : OpenCloseApp;
-        TRUE : state;
-    esac;
-
--- ویژگی ایمنی: حالت دستگاه باید همیشه تعریف شده باشد
+// مشخصات زمانی خطی (LTL)
 LTLSPEC
-    G (state = Off | state = On | state = Menu | state = InputSelect | state = VolumeAdjust | state = ChannelChange | state = AppMode);
+    G (state = on -> F state = off); // همیشه وقتی تلویزیون روشن می‌شود، در آینده خاموش می‌شود
 
--- ویژگی زیست پذیری: در نهایت، حالت دستگاه باید روشن شود
 LTLSPEC
-    F (state = On);
+    G (state = off -> F state = on); // همیشه وقتی تلویزیون خاموش می‌شود، در آینده روشن می‌شود
